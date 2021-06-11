@@ -2256,14 +2256,25 @@ class Builder
         return $this->lock(false);
     }
 
+
     /**
      * Get the SQL representation of the query.
      *
-     * @return string
+     * @param bool $completed
+     * @return array|string|string[]|null
      */
-    public function toSql()
+    public function toSql(bool $completed = false)
     {
-        return $this->grammar->compileSelect($this);
+        $sql = $this->grammar->compileSelect($this);
+        if(!$completed) return $sql;
+
+        $data = $this->getBindings();
+
+        return preg_replace_callback('/\?/', function() use (&$data){
+            $value = array_shift($data);
+            return $value === '' ? '""' : (is_string($value)? sprintf('"%s"', $value) : $value);
+        }, $sql);
+
     }
 
     /**
@@ -3371,9 +3382,13 @@ class Builder
      *
      * @return $this
      */
-    public function dump()
+    public function dump($completed = true)
     {
-        dump($this->toSql(), $this->getBindings());
+        if($completed){
+            dump($this->toSql($completed));
+        }else{
+            dump($this->toSql(), $this->getBindings());
+        }
 
         return $this;
     }
@@ -3383,9 +3398,14 @@ class Builder
      *
      * @return void
      */
-    public function dd()
+    public function dd($completed = true)
     {
-        dd($this->toSql(), $this->getBindings());
+        if($completed){
+            dd($this->toSql($completed));
+        }else{
+            dd($this->toSql(), $this->getBindings());
+        }
+
     }
 
     /**
